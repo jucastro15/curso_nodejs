@@ -1,9 +1,15 @@
+import "dotenv/config.js";
 import express  from "express";
 import  cors from "cors";
+import multer from "multer";
 
 const servidor = express();
 servidor.use( express.json() );
 servidor.use(cors());
+
+let upLoadPerfil = multer({ dest: './storage/perfil'})
+servidor.use('/storage/perfil', express.static('./storage/perfil'));
+
 
 
 servidor.get('/helloworld', (req,resp) => {
@@ -39,6 +45,11 @@ servidor.get('/mensagens/ocupado/recado', (req,resp) => {
 })
 
 servidor.get('/calculadora/soma/:n1/:n2', (req, res) => {
+
+  if (isNaN(req.params.n1) || isNaN(req.params.n2)) {
+    res.status(400).send('Os parâmetros devem ser números');
+    return;
+  }
     const n1 = Number(req.params.n1);
     const n2 = Number(req.params.n2);
     const soma = n1 + n2;
@@ -60,10 +71,20 @@ servidor.get('/calculadora/soma/:n1/:n2', (req, res) => {
     });
   });
 
-  servidor.get('/mensagens/ola', (req,resp) => {
-    let pessoa = req.query.nome ?? ':)';
+  servidor.get('/mensagens/ola', (req, resp) => {
+    
+    if (!req.query.nome) {
+        resp.status(400).send({
+            erro: 'O parâmetro NOME é obrigatório'
+        });
+        return;
+    }
+
+    
+    let pessoa = req.query.nome || ':)';
+
     resp.send({
-      pessoa:pessoa
+        mensagem: 'Olá ' + pessoa
     });
 });
 
@@ -122,8 +143,16 @@ servidor.post('/loja/pedido', (req,resp) =>{
  
  });
 
- servidor.post('/loja/pedido/completo', (req, res) => {
-    let parcelas = req.body.parcelas;
+ servidor.post('/loja/pedido/completo', (req, resp) => {
+
+   try {
+
+    if(!req.body.parcelas || isNaN(req.body.parcelas)) throw new Error(`Parametro invalido`)
+    
+
+    if(!req.body.itens) throw new Error (`Erro no `)
+
+     let parcelas = req.body.parcelas;
     let itens = req.body.itens;
     let cupom = req.query.cupom;
   
@@ -140,17 +169,49 @@ servidor.post('/loja/pedido', (req,resp) =>{
     }
  
 
-    res.send({
-      entrada:{
-      itens:itens.descricao,
-      cupom:cupom
-      },
+    let descricoes = itens.map(item => item.descricao);
+
+    
+    resp.send({
+        entrada: {
+            descricoes: descricoes, 
+            cupom: cupom 
+        },
+        total: total
+    });
+  }
+
+    catch(err){
+      resp.status(400).send({
+        erro: err.mensage
+    });
+   
+    }
+
+  })
+
+  servidor.post('/perfil/capa', upLoadPerfil.single('imagem'), (req, resp) => {
+
+
+
+    let caminho = req.file.path
+    let extencao = req.file.mimetype
+    let nome = req.file.originalname
+   
+
+    resp.send({
+      caminho: caminho,
+      extencao: extencao,
+      nome:nome,
       
-      total:total
     });
   });
+
+
+
+const PORTA = process.env.PORTA
   
 
 servidor.listen(
-    5001, 
-    () => console.log('API subida com sucesso na porta 5001'));
+    PORTA,
+    () => console.log(`API subida com sucesso na porta ${PORTA}`));
