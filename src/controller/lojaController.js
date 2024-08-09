@@ -1,79 +1,72 @@
-import { Router } from "express";
+import { Router } from "express"
+import { calcularTotal } from "../service/lojaService/pedidoCompleto.js";
+import { valorParcela } from "../service/lojaService/pedidoCompleto.js";
+import { validarCompleto } from "../validation/loja/completo.js";
+import { logError } from "../utils/log.js";
+import { criarErro } from "../utils/error.js";
 
 const endpoints = Router();
- endpoints.post('/loja/pedido', (req,resp) =>{
-    let total = req.body.total
-    let parcelas = req.body.parcelas
-    let cupom = req.query.cupom
+endpoints.post('/loja/pedido', (req, resp) => {
+  let total = req.body.total
+  let parcelas = req.body.parcelas
+  let cupom = req.query.cupom
 
-    if(parcelas > 1){
-   
-        total += total * 0.05
- 
-    }
-    if(cupom === 'QUERO100'){
-        total-=100
+  if (parcelas > 1) {
 
-    }
+    total += total * 0.05
 
-    let vlp = total/parcelas
+  }
+  if (cupom === 'QUERO100') {
+    total -= 100
 
-    resp.status(202).send({
-      entrada:{
-      cupom:cupom,
-      parcelas:parcelas
-      },
-      vlparcela:vlp,
-      total:total
-    })
- 
- });
+  }
 
- endpoints.post('/loja/pedido/completo', (req, resp) => {
+  let vlp = total / parcelas
 
-   try {
+  resp.status(202).send({
+    entrada: {
+      cupom: cupom,
+      parcelas: parcelas
+    },
+    vlparcela: vlp,
+    total: total
+  })
 
-    if(!req.body.parcelas || isNaN(req.body.parcelas)) throw new Error(`Parametro invalido`)
-    
+});
 
-    if(!req.body.itens) throw new Error (`Erro no `)
+endpoints.post('/loja/pedido/completo', (req, resp) => {
 
-     let parcelas = req.body.parcelas;
+  try {
+
+    validarCompleto(req)
+
+    let parcelas = req.body.parcelas;
     let itens = req.body.itens;
     let cupom = req.query.cupom;
-  
-    let total = 0;
-    for (let item of itens) {
-      total += item.preco;
-    }
-    if (parcelas > 1) {
-      total += total * 0.05; 
-
-    }if (cupom === 'quero100') {
-      total -= 100;
-
-    }
- 
-
-    let descricoes = itens.map(item => item.descricao);
-
     
+
+    let descricoes = itens.map(item => item.desc);
+
+  
+    let total = calcularTotal(parcelas, itens, cupom)
+
+    let vlp = valorParcela(total, parcelas)
+
     resp.send({
-        entrada: {
-            descricoes: descricoes, 
-            cupom: cupom 
-        },
-        total: total
+      produto: {
+        descricoes: descricoes,
+        preco: itens.map(item => item.preco)
+      },
+      total: total,
+      vlp: vlp
     });
   }
 
     catch(err){
-      resp.status(400).send({
-        erro: err.mensage
-    });
+      resp.status(400).send(criarErro(err));
    
     }
 
-  });
+});
 
-  export default endpoints;
+export default endpoints;
