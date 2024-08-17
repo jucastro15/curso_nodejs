@@ -2,8 +2,7 @@ import { Router } from "express"
 import { calcularTotal } from "../service/lojaService/pedidoCompleto.js";
 import { valorParcela } from "../service/lojaService/pedidoCompleto.js";
 import { validarCompleto } from "../validation/loja/completo.js";
-import { logError } from "../utils/log.js";
-import { criarErro } from "../utils/error.js";
+
 
 const endpoints = Router();
 endpoints.post('/loja/pedido', (req, resp) => {
